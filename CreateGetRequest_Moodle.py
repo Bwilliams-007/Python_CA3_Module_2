@@ -50,20 +50,46 @@ class LocalGetSections(object):
     def __init__(self, cid, secnums=[], secids=[]):
         self.getsections = call('local_wsmanagesections_get_sections', courseid=cid, sectionnumbers=secnums,
                                 sectionids=secids)
+class LocalUpdateSections(object):
+    """Updates sectionnames. Requires: courseid and an array with sectionnumbers and sectionnames"""
+
+    def __init__(self, cid, sectionsdata):
+        self.updatesections = call('local_wsmanagesections_update_sections', courseid=cid, sections=sectionsdata)
 
 
 courseid = "28"  # Exchange with valid id.
 # Get all sections of the course.
 sec = LocalGetSections(courseid)
 
+payload = []
+
+for section in LocalGetSections(courseid).getsections:
+    data1 = {
+
+        'section': section['sectionnum'],
+
+        'summary': ''
+
+    }
+
+payload.append(data1)
+
+sec_writes = LocalUpdateSections(courseid, payload)
+
 grid_col = sec.getsections
+# print(grid_col)
 
 json_object = json.dumps(grid_col, indent=4, sort_keys=True)
+# print(json_object)
 
 json_object1 = json.loads(json_object)
+# print(json_object)
+
+# print the keys and values
+datalist = ""
+datalist1 = ""
 
 for key in json_object1:
-    print(json_object1)
     for i in range(len(json_object1)):
         print(i)
 
@@ -72,19 +98,49 @@ for key in json_object1:
             valuespit = valuedate.split("-")
             valuespitleft = valuespit[0]
             valuespitright = valuespit[1]
-            currentyear = datetime.now().year
+            currentdate = datetime.now()
+            currentyear = datetime.now().year - 1
             onverTodatelift = parse("{}, {}".format(valuespitleft, currentyear))
             onverTodateright = parse("{}, {}".format(valuespitright, currentyear))
+
             print(onverTodatelift)
             print(onverTodateright)
 
         valuelink = json_object1[i]["summary"]
-        print("link i summary: "+valuelink)
-        directory = (
-            r"C:\Users\ThinkPad T440\Documents\Course_work_Al_ML\Module_2\Python_Class\Python_CA_Module_2\Semaster1")
+        sectionlink = json_object1[i]['sectionnum']
+        wk = "wk"
+        if wk in valuelink or valuelink == '' or "ltr" in valuelink:
+            print("link i summary: " + valuelink)
+            directory = (
+                r"C:\Users\ThinkPad T440\Documents\Course_work_Al_ML\Module_2\Python_Class\Python_CA_Module_2\Semaster1")
 
-        for folder, sub_folders, files in os.walk(directory):
-            for sub_fold in sub_folders:
-                print("\t Subfolder: "+sub_fold)
+            for folder, subfolder, files in os.walk(directory):
+                for f in files:
+                    if "wk" + str(i) in files[2]:
+                        print("\t File: " + f)
+                        match = re.search(r"\wk\d", f)
+                        extentt = re.search(r"\.\w+", f)
+                        extentt = extentt.group().replace(".", "")
 
+
+                        data = [{'type': 'num', 'section': sectionlink, 'summary': '', 'summaryformat': 1,
+                                 'visible': 1, 'highlight': 0,
+                                 'sectionformatoptions': [{'name': 'level', 'value': '1'}]}]
+
+                        data[0][
+                            "summary"] = '<a href= "https://mikhail-cct.github.io/ooapp/{}/"> Week {}: {}file:</a><br>\n'.format(
+                            f, i, extentt)
+                        "\n"
+
+                        datalist = (data[0]["summary"])
+                        datalist1 = datalist1 + "" + datalist
+                        if len(datalist1) > 200:
+                            data[0]["summary"] = datalist1
+                            sec_write = LocalUpdateSections(courseid, data)
+                        if match:
+                            break
+                    else:
+                        break
+        else:
+            print("Do not contain")
 
