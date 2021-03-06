@@ -5,6 +5,7 @@ from dateutil.parser import parse
 import os
 import re
 from bs4 import BeautifulSoup
+import requests
 
 KEY = "8cc87cf406775101c2df87b07b3a170d"
 URL = "https://034f8a1dcb5c.eu.ngrok.io"
@@ -60,6 +61,9 @@ class LocalUpdateSections(object):
 courseid = "28"  # Exchange with valid id.
 # Get all sections of the course.
 sec = LocalGetSections(courseid)
+"""
+Flow is to clear moodle for new entries 
+"""
 
 payload = []
 
@@ -89,10 +93,29 @@ json_object1 = json.loads(json_object)
 datalist = ""
 datalist1 = ""
 
+
+def record():
+    r = requests.get(r"https://drive.google.com/drive/folders/1pFHUrmpLv9gEJsvJYKxMdISuQuQsd_qX")
+    soup = BeautifulSoup(r.content)
+    count = int(0)
+    videos = soup.find_all('div',class_ = 'Q5txwe')
+    vidurlink = []
+    vidinfodate = []
+    para = []
+    for video in videos:
+        para.append(str(video))
+        mat = re.search(r"\d+-\d+-\d+", para[count])
+        vidoedate = (mat.group())
+        video_id = video.parent.parent.parent.parent.attrs['data-id']
+        path = "https://drive.google.com/file/d/" + video_id
+        count = count + 1
+        vidinfodate.append(vidoedate)
+        vidurlink.append(path)
+
+    return vidinfodate, vidurlink
+
 for key in json_object1:
     for i in range(len(json_object1)):
-        print(i)
-
         valuedate = json_object1[i]["name"]
         if "-" in valuedate:
             valuespit = valuedate.split("-")
@@ -102,14 +125,29 @@ for key in json_object1:
             currentyear = datetime.now().year - 1
             onverTodatelift = parse("{}, {}".format(valuespitleft, currentyear))
             onverTodateright = parse("{}, {}".format(valuespitright, currentyear))
-
             print(onverTodatelift)
             print(onverTodateright)
+            '''
+            Call the function record that has the list of date and url
+            '''
+            fdate_url = record()
+            if i >= 1:
+                subt = i - 1
+                recodedate = fdate_url[0][subt]
+                date_time_str = recodedate
+                date_time_obj = datetime.strptime(date_time_str, '%Y-%m-%d')
+                print(date_time_obj)
+                if onverTodatelift <= date_time_obj <= onverTodateright:
+                    urldate = fdate_url[1][subt]
+                else:
+                    print("date not in range")
+
 
         valuelink = json_object1[i]["summary"]
         sectionlink = json_object1[i]['sectionnum']
+        print(type(sectionlink))
         wk = "wk"
-        if wk in valuelink or valuelink == '' or "ltr" in valuelink:
+        if wk in valuelink or valuelink == '' or sectionlink >= 9:
             print("link i summary: " + valuelink)
             directory = (
                 r"C:\Users\ThinkPad T440\Documents\Course_work_Al_ML\Module_2\Python_Class\Python_CA_Module_2\Semaster1")
@@ -121,22 +159,26 @@ for key in json_object1:
                         match = re.search(r"\wk\d", f)
                         extentt = re.search(r"\.\w+", f)
                         extentt = extentt.group().replace(".", "")
-
+                        print(extentt)
+                        print(match)
 
                         data = [{'type': 'num', 'section': sectionlink, 'summary': '', 'summaryformat': 1,
                                  'visible': 1, 'highlight': 0,
                                  'sectionformatoptions': [{'name': 'level', 'value': '1'}]}]
 
                         data[0][
-                            "summary"] = '<a href= "https://mikhail-cct.github.io/ooapp/{}/"> Week {}: {}file:</a><br>\n'.format(
+                            "summary"] = '<a href= "https://mikhail-cct.github.io/ooapp/{}/#/"> Week {}: {}file:</a><br>\n'.format(
                             f, i, extentt)
                         "\n"
+                        googlevidoe = '<a href =' + urldate + "> Week {}: mp4:</a><br>\n".format(i)
 
                         datalist = (data[0]["summary"])
                         datalist1 = datalist1 + "" + datalist
                         if len(datalist1) > 200:
-                            data[0]["summary"] = datalist1
+                            data[0]["summary"] = datalist1 + googlevidoe
                             sec_write = LocalUpdateSections(courseid, data)
+                            datalist1 = ""
+
                         if match:
                             break
                     else:
